@@ -1,0 +1,26 @@
+{
+  "task": "rising_vs_falling",
+  "input_shape": [
+    2
+  ],
+  "input_semantics": [
+    "first_value",
+    "second_value"
+  ],
+  "value_range": [
+    0.0,
+    1.0
+  ],
+  "num_classes": 2,
+  "class_names": [
+    "falling",
+    "rising"
+  ],
+  "class_index": {
+    "falling": 0,
+    "rising": 1
+  },
+  "rule": "rising iff second_value > first_value (training excludes near-ties)",
+  "input_dtype": "int8",
+  "output_dtype": "int8"
+}

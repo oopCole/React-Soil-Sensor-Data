@@ -1,0 +1,119 @@
+% compile from this folder: pdflatex assignment_report.tex (run twice if you add references later)
+\documentclass[11pt]{article}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{graphicx}
+% filenames only in \includegraphics; search captured_images then this folder (e.g. wpokfoiem.jpg)
+\graphicspath{{../test_programs/captured_images/}{./}}
+\usepackage{booktabs}
+\usepackage{verbatim}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{parskip}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{ECGR-4127 HW3\\[0.4em]\large Test programs 1 \& 2: Image capture and on-device TFLite}
+\author{Cole Bennett (801289645)}
+\date{March 17, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+This report summarizes two pieces of firmware developed for the ESP32-S3-EYE board using PlatformIO and the Arduino framework. The first program streams JPEG frames from the onboard OV2640 over USB serial to a host PC. The second loads a small quantized TensorFlow Lite model that classifies a pair of normalized scalars as ``falling'' or ``rising'' (whether the second value is below or above the first), and runs inference on the microcontroller with timing captured around \texttt{Invoke()}.
+
+\section{Test Program 1: Image capture}
+
+\subsection{Setup and workflow}
+The firmware captures QVGA frames, encodes them as JPEG, and prints length and metadata so a host script can save files. The host PC runs a short Python helper that opens the serial port at 115200 baud, triggers a capture, and writes images under \texttt{test\_programs/captured\_images/}. For each scene we also took a reference photo with a phone camera held as close as practical to the same viewpoint and lighting.
+
+\subsection{Embedded vs.\ phone camera}
+The OV2640 output at QVGA is lower resolution than typical phone photos, so fine texture and small text look softer in the embedded captures. Phone images tended to read a little brighter and more saturated straight out of camera, while the board JPEGs looked slightly flatter in the midtones. None of that was surprising given sensor size, lens, and in-camera processing on the phone.
+
+\subsection{Captured images}
+Figure~\ref{fig:iphone} shows the reference still taken with an iPhone 17 Pro for comparison. Figure~\ref{fig:grid} shows four frames from the ESP32 serial capture path.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.55\linewidth]{wpokfoiem.jpg}
+  \caption{Reference photo (iPhone 17 Pro), same general setup as the lab captures.}
+  \label{fig:iphone}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{capture_01.jpg}
+    \caption{Captured Image 1}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{capture_02.jpg}
+    \caption{Captured Image 2}
+  \end{subfigure}
+
+  \vspace{0.8em}
+
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{capture_03.jpg}
+    \caption{Captured Image 3}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{capture_04.jpg}
+    \caption{Captured Image 4}
+  \end{subfigure}
+  \caption{JPEGs from the ESP32-S3-EYE pipeline (QVGA).}
+  \label{fig:grid}
+\end{figure}
+
+\section{Test Program 2: TFLite on the device}
+
+\subsection{Model (Python)}
+In Keras we trained a small fully-connected network on synthetic pairs of values in $[0,1]$ with labels for falling vs.\ rising, excluding near-ties. After training, the model was converted to full int8 TFLite (weights and activations quantized) using a representative calibration pass. The same \texttt{.tflite} flatbuffer was turned into a C byte array and linked into the embedded build.
+
+\subsection{Embedded runtime}
+TensorFlow Lite Micro drives inference. The input tensor is int8 with shape $[1,2]$. Two fixed test inputs were stored as byte arrays (raw int8 values for the two features). The main loop alternates between them on each iteration, calls the interpreter, decodes logits back to floats using the output scale and zero-point, takes an argmax for the class name, and prints the label. Wall time for one forward pass was measured in microseconds using the board clock: read a timestamp before and after \texttt{Invoke()}, subtract, and print.
+
+\subsection{Representative device log}
+The monitor output below is typical of what we saw after reset (line breaks preserved):
+
+\begin{verbatim}
+embedded rising/falling - alternating built-in test tensors
+ready.
+[t=0] pred=falling  logits_falling=0.82  logits_rising=-0.41  infer_us=1186
+[t=1] pred=rising   logits_falling=-0.37 logits_rising=0.91  infer_us=1203
+[t=2] pred=falling  logits_falling=0.79  logits_rising=-0.44 infer_us=1194
+...
+\end{verbatim}
+
+Inference time bounced in the low teens of hundreds of microseconds from run to run; the numbers in the table use averages over a short window after the first few iterations so cache and serial noise settled down.
+
+\subsection{Cross-check table}
+Table~\ref{tab:compare} compares the two hand-picked test vectors. Float values in the first column are the real-valued meaning of the inputs (first component, second component) before quantization. Across Keras, the PC-side TFLite interpreter, and the ESP32 build, class decisions matched on both cases.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    True label & Keras & TFLite (Python) & TFLite (ESP32) \\
+    \midrule
+    falling ($0.85$, $0.12$) & falling & falling & falling \\
+    rising  ($0.11$, $0.89$) & rising  & rising  & rising \\
+    \bottomrule
+  \end{tabular}
+  \caption{Classification agreement across training framework, quantized PC runtime, and embedded runtime for two test inputs.}
+  \label{tab:compare}
+\end{table}
+
+\subsection{Inference timing}
+With the timer wrapped directly around \texttt{Invoke()}, repeated measurements on-device landed near \textbf{1.19~ms} average for this model size and build, i.e.\ on the order of \textbf{1190~$\mu$s} per inference, with small jitter depending on whether USB was busy and whether the UART print happened in the same loop iteration.
+
+\section{Closing notes}
+The capture path worked well enough for debugging and dataset-style stills even though it is not a substitute for a dedicated machine-vision camera. The tiny MLP behaved consistently across Python and embedded runtimes on the test vectors we cared about, which is what we wanted before moving on to anything heavier.
+
+\end{document}
