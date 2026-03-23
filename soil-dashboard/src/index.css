@@ -1,0 +1,61 @@
+:root {
+  --text: #1a1a1a;
+  --muted: #5c5c5c;
+  --bg: #f6f4ef;
+  --surface: #fff;
+  --card-inner: #faf8f4;
+  --border: #e0dcd4;
+  --link: #1d5f4a;
+  --accent: #2d6a4f;
+  --accent-soft: rgba(45, 106, 79, 0.12);
+  --chart-grid: #e8e4dc;
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #eceae4;
+    --muted: #a39e94;
+    --bg: #121410;
+    --surface: #1c1b17;
+    --card-inner: #23221d;
+    --border: #35332c;
+    --link: #7ec9a8;
+    --accent: #7ec9a8;
+    --accent-soft: rgba(126, 201, 168, 0.15);
+    --chart-grid: #35332c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+a {
+  color: var(--link);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text);
+}
