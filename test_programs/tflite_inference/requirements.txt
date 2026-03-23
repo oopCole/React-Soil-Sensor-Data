@@ -1,3 +1,0 @@
-# keras / tflite export (install in a venv; large download)
-tensorflow>=2.15,<2.20
-numpy>=1.24
