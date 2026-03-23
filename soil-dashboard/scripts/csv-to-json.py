@@ -39,7 +39,6 @@ def main() -> None:
     payload = {
         "source": "https://docs.google.com/spreadsheets/d/17GL9VDrRStllIhly6Wa1WXqT6rtxqu071V3waARuHmY/edit?usp=sharing",
         "notes": {
-            "moistureScale": "0–0.5 (sheet: (raw - 200)/1800)",
             "locations": [
                 "Huntsville",
                 "UNCC",

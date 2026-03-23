@@ -10,7 +10,6 @@ export type SoilReading = {
 export type SoilPayload = {
   source: string
   notes: {
-    moistureScale: string
     locations: [string, string]
   }
   series: {

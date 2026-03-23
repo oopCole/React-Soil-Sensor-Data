@@ -119,12 +119,11 @@ export default function App() {
         <div>
           <h1>Soil sensor readings</h1>
           <p className="subtitle">
-            Moisture (0–0.5), pH, EC (µS/cm), temperature (°C), nitrogen (mg/kg)
-            — from{' '}
+            Moisture, pH, EC (µS/cm), temperature (°C), nitrogen (mg/kg) — from{' '}
             <a href={data.source} target="_blank" rel="noreferrer">
               Soil Testing spreadsheet
             </a>
-            . {data.notes.moistureScale}
+            .
           </p>
         </div>
       </header>
